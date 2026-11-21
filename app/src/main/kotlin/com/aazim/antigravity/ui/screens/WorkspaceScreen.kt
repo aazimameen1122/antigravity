@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -366,6 +367,7 @@ fun WorkspaceScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(innerPadding)
+                                    .navigationBarsPadding()
                             ) {
                                 FileTree(
                                     rootDirectory = rootDir,
@@ -442,6 +444,7 @@ fun WorkspaceScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(innerPadding)
+                                    .navigationBarsPadding()
                             ) {
                                 if (activeTab != null) {
                                     if (activeTab.isDiffView) {
@@ -571,6 +574,7 @@ fun WorkspaceScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(innerPadding)
+                                    .navigationBarsPadding()
                             ) {
                                 TerminalView(modifier = Modifier.fillMaxSize())
                             }
