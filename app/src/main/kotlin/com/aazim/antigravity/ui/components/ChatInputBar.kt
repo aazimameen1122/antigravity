@@ -1,10 +1,16 @@
 package com.aazim.antigravity.ui.components
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
+import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -74,6 +80,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -266,7 +273,12 @@ fun ChatInputBar(
 
     val voicePrompt = stringResource(R.string.chat_voice_prompt)
     val voiceUnavailableMsg = stringResource(R.string.chat_voice_unavailable, "")
+    val voiceListeningMsg = stringResource(R.string.chat_voice_listening)
+    val voiceNoServiceMsg = stringResource(R.string.chat_voice_no_service)
+    val voicePermissionDeniedMsg = stringResource(R.string.chat_voice_permission_denied)
+    val voiceErrorMsg = stringResource(R.string.chat_voice_error, "")
 
+    // Fallback: external speech activity (only used when no in-app recognition service exists)
     val speechLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -275,6 +287,119 @@ fun ChatInputBar(
             if (!spokenText.isNullOrBlank()) {
                 inputText = if (inputText.isBlank()) spokenText else "$inputText $spokenText"
             }
+        }
+    }
+
+    // Primary: in-app SpeechRecognizer. The old code only fired a
+    // RecognizerIntent activity, which fails with "No Activity found to
+    // handle Intent" on devices/ROMs with no external speech activity
+    // (and Android 11+ package visibility hid it without a <queries> entry).
+    var isListening by remember { mutableStateOf(false) }
+    var speechBaseText by remember { mutableStateOf("") }
+    val speechRecognizer = remember { mutableStateOf<SpeechRecognizer?>(null) }
+
+    fun appendSpoken(spokenText: String) {
+        if (spokenText.isBlank()) return
+        val base = speechBaseText
+        inputText = if (base.isBlank()) spokenText else "$base $spokenText"
+    }
+
+    fun startInAppListening() {
+        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+            // No recognition service at all: try the external activity once,
+            // and if that is missing too, say so in plain words.
+            try {
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_PROMPT, voicePrompt)
+                }
+                speechLauncher.launch(intent)
+            } catch (e: Exception) {
+                Toast.makeText(context, voiceNoServiceMsg, Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        try {
+            speechRecognizer.value?.destroy()
+            val recognizer = SpeechRecognizer.createSpeechRecognizer(context)
+            speechRecognizer.value = recognizer
+            speechBaseText = inputText
+            recognizer.setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) { isListening = true }
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() { isListening = false }
+                override fun onError(error: Int) {
+                    isListening = false
+                    val msg = when (error) {
+                        SpeechRecognizer.ERROR_NO_MATCH,
+                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech heard"
+                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> voicePermissionDeniedMsg
+                        else -> "code $error"
+                    }
+                    if (error != SpeechRecognizer.ERROR_NO_MATCH &&
+                        error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                    ) {
+                        Toast.makeText(context, "$voiceErrorMsg: $msg", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                override fun onResults(results: Bundle?) {
+                    isListening = false
+                    val spokenText = results
+                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.firstOrNull()
+                    if (!spokenText.isNullOrBlank()) appendSpoken(spokenText)
+                }
+                override fun onPartialResults(partialResults: Bundle?) {
+                    val spokenText = partialResults
+                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.firstOrNull()
+                    if (!spokenText.isNullOrBlank()) appendSpoken(spokenText)
+                }
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            })
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault().toLanguageTag())
+                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                putExtra(RecognizerIntent.EXTRA_PROMPT, voicePrompt)
+            }
+            recognizer.startListening(intent)
+            isListening = true
+            Toast.makeText(context, voiceListeningMsg, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            isListening = false
+            Toast.makeText(context, "$voiceUnavailableMsg: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) startInAppListening()
+        else Toast.makeText(context, voicePermissionDeniedMsg, Toast.LENGTH_LONG).show()
+    }
+
+    fun startVoiceInput() {
+        if (isListening) {
+            speechRecognizer.value?.stopListening()
+            isListening = false
+            return
+        }
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            startInAppListening()
+        } else {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            speechRecognizer.value?.destroy()
+            speechRecognizer.value = null
         }
     }
 
@@ -1057,15 +1182,7 @@ fun ChatInputBar(
                                 if (onVoiceInputClick != null) {
                                     onVoiceInputClick()
                                 } else {
-                                    try {
-                                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                            putExtra(RecognizerIntent.EXTRA_PROMPT, voicePrompt)
-                                        }
-                                        speechLauncher.launch(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "$voiceUnavailableMsg: ${e.message}", Toast.LENGTH_SHORT).show()
-                                    }
+                                    startVoiceInput()
                                 }
                             },
                         contentAlignment = Alignment.Center
@@ -1073,7 +1190,7 @@ fun ChatInputBar(
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = stringResource(R.string.chat_voice_input),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = if (isListening) AntigravityRed else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
                     }

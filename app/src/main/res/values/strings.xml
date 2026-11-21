@@ -265,6 +265,10 @@
     <string name="chat_voice_input">Voice input</string>
     <string name="chat_voice_prompt">Speak prompt for Antigravity...</string>
     <string name="chat_voice_unavailable">Voice input not available: %s</string>
+    <string name="chat_voice_listening">Listening… tap the mic again to stop</string>
+    <string name="chat_voice_no_service">No speech service on this device. Install or enable the Google app (or Gboard voice typing), then try again.</string>
+    <string name="chat_voice_permission_denied">Microphone permission is needed for voice input</string>
+    <string name="chat_voice_error">Voice input error: %s</string>
     <string name="chat_model_select">Select model</string>
     <string name="chat_mention_file">Workspace file</string>
     <string name="chat_worked_for">Worked for %s</string>
