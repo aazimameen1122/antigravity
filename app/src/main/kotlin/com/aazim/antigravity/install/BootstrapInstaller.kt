@@ -30,7 +30,7 @@ object BootstrapInstaller {
     private const val TAG = "BootstrapInstaller"
 
     private const val ASSET_GLIBC = "antigravity-glibc.zip"
-    private const val BOOTSTRAP_URL = "https://github.com/KuatoDev/antigravity-bootstrap/releases/download/core-v1/bootstrap-aarch64.zip"
+    private const val BOOTSTRAP_URL = "https://github.com/aazimameen1122/antigravity-bootstrap/releases/download/core-v1/bootstrap-aarch64.zip"
     private const val BOOTSTRAP_SHA256 = "6a740663ffaca4e63cb5e485c08b150828ef07fd6325f1f2146414a2d256855c"
     private const val MARKER_FILE = ".installed"
     private const val ERROR_LOG_FILE = "bootstrap_error.log"

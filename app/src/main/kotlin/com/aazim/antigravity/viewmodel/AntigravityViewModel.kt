@@ -1646,7 +1646,7 @@ class AntigravityViewModel : ViewModel() {
                 try { usrBinRtk.setExecutable(true, false) } catch (e: Exception) {}
                 val usrBinPath = usrBinRtk.absolutePath
                 val runtimeBinPath = runtimeRtk.absolutePath
-                val rtkDownloadUrl = "https://github.com/KuatoDev/antigravity-bootstrap/releases/download/core-v1/rtk"
+                val rtkDownloadUrl = "https://github.com/aazimameen1122/antigravity-bootstrap/releases/download/core-v1/rtk"
 
                 "echo '[Agent] Preparing environment for RTK plugin...' && mkdir -p '$pluginDir/rules' '$homePluginDir/rules' && if ! command -v rtk >/dev/null 2>&1; then if [ -f '$runtimeBinPath' ]; then cp '$runtimeBinPath' '$usrBinPath' 2>/dev/null && chmod +x '$usrBinPath' 2>/dev/null; elif [ -f '$usrBinPath' ]; then chmod +x '$usrBinPath' 2>/dev/null; else echo '[Agent] Downloading RTK binary from release payload...' && curl -sSL --retry 3 -o '$usrBinPath' '$rtkDownloadUrl' && chmod +x '$usrBinPath' 2>/dev/null; fi; fi && if command -v rtk >/dev/null 2>&1; then echo '[Agent] Initializing RTK for Antigravity agent...' && rtk init --agent antigravity --global --auto-patch 2>&1 || true && cp -r '$pluginDir'/* '$homePluginDir/' 2>/dev/null; agy-fix-paths '$pluginDir' 2>/dev/null || true; echo \"[Agent] Verified: $(rtk --version 2>&1)\" && echo '[Agent] RTK plugin installed and verified!'; else echo '[Agent Error] Failed to install or download RTK binary.'; exit 1; fi"
             }
@@ -1759,7 +1759,7 @@ class AntigravityViewModel : ViewModel() {
         val gitEnvSetup = prepareGitEnv(context)
 
         val usrRtkPath = File(context.filesDir, "usr/bin/rtk").absolutePath
-        val rtkDownloadUrl = "https://github.com/KuatoDev/antigravity-bootstrap/releases/download/core-v1/rtk"
+        val rtkDownloadUrl = "https://github.com/aazimameen1122/antigravity-bootstrap/releases/download/core-v1/rtk"
         val rawCmd = if (track.isPlugin && track.id.lowercase() == "rtk") {
             "echo '[RTK] Updating RTK configuration...' && if [ ! -f '$usrRtkPath' ]; then echo '[RTK] Downloading RTK binary from release payload...' && curl -sSL --retry 3 -o '$usrRtkPath' '$rtkDownloadUrl'; fi && chmod +x '$usrRtkPath' 2>/dev/null && rtk init --agent antigravity --global --auto-patch 2>&1 && cp -r '$targetDir'/* '$homeTargetDir/' 2>/dev/null; agy-fix-paths '$targetDir' 2>/dev/null || true; echo \"[RTK plugin successfully updated: $(rtk --version 2>&1)]\""
         } else if (track.isPlugin && File(targetDir, ".git").exists()) {
@@ -3590,7 +3590,7 @@ This app runs on an Android phone. Commands you run live in a session that ends 
             try {
                 val cacheDir = File(context.filesDir, "cache").apply { mkdirs() }
 
-                val skillsUrl = URL("https://raw.githubusercontent.com/KuatoDev/antigravity-catalogue/main/skills.json")
+                val skillsUrl = URL("https://raw.githubusercontent.com/aazimameen1122/antigravity-catalogue/main/skills.json")
                 val skillsConn = (skillsUrl.openConnection() as HttpURLConnection).apply {
                     connectTimeout = 10000
                     readTimeout = 10000
@@ -3603,7 +3603,7 @@ This app runs on an Android phone. Commands you run live in a session that ends 
                     try { File(cacheDir, "skills_catalogue.json").writeText(skillsJson) } catch (e: Exception) {}
                 }
 
-                val pluginsUrl = URL("https://raw.githubusercontent.com/KuatoDev/antigravity-catalogue/main/plugins.json")
+                val pluginsUrl = URL("https://raw.githubusercontent.com/aazimameen1122/antigravity-catalogue/main/plugins.json")
                 val pluginsConn = (pluginsUrl.openConnection() as HttpURLConnection).apply {
                     connectTimeout = 10000
                     readTimeout = 10000
@@ -3679,7 +3679,7 @@ This app runs on an Android phone. Commands you run live in a session that ends 
                             if (!usrBinRtk.exists()) {
                                 try {
                                     addLog("Plugin", "Downloading RTK binary from release payload...")
-                                    val rtkUrl = java.net.URL("https://github.com/KuatoDev/antigravity-bootstrap/releases/download/core-v1/rtk")
+                                    val rtkUrl = java.net.URL("https://github.com/aazimameen1122/antigravity-bootstrap/releases/download/core-v1/rtk")
                                     usrBinRtk.parentFile?.mkdirs()
                                     rtkUrl.openStream().use { input ->
                                         usrBinRtk.outputStream().use { output ->
