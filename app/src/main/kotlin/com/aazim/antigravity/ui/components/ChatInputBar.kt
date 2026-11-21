@@ -304,26 +304,36 @@ fun ChatInputBar(
         inputText = if (base.isBlank()) spokenText else "$base $spokenText"
     }
 
+    // External speech activity — the second route. With the <queries>
+    // declaration now in the manifest this can resolve on ROMs where it
+    // was invisible before (the original v1.0.5 failure).
+    fun launchActivityFallback() {
+        try {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_PROMPT, voicePrompt)
+                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+            }
+            speechLauncher.launch(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, voiceNoServiceMsg, Toast.LENGTH_LONG).show()
+        }
+    }
+
     fun startInAppListening() {
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            // No recognition service at all: try the external activity once,
-            // and if that is missing too, say so in plain words.
-            try {
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_PROMPT, voicePrompt)
-                }
-                speechLauncher.launch(intent)
-            } catch (e: Exception) {
-                Toast.makeText(context, voiceNoServiceMsg, Toast.LENGTH_LONG).show()
-            }
+            launchActivityFallback()
             return
         }
         try {
-            speechRecognizer.value?.destroy()
-            val recognizer = SpeechRecognizer.createSpeechRecognizer(context)
-            speechRecognizer.value = recognizer
+            // Reuse ONE recognizer instance. v1.0.6 destroyed and recreated
+            // it on every tap, and omitted EXTRA_CALLING_PACKAGE — Google's
+            // recognition service answers that with ERROR_CLIENT (code 5),
+            // which is exactly what the user hit on v1.0.6.
+            val recognizer = speechRecognizer.value
+                ?: SpeechRecognizer.createSpeechRecognizer(context).also { speechRecognizer.value = it }
             speechBaseText = inputText
+            var fallbackTried = false
             recognizer.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) { isListening = true }
                 override fun onBeginningOfSpeech() {}
@@ -332,10 +342,28 @@ fun ChatInputBar(
                 override fun onEndOfSpeech() { isListening = false }
                 override fun onError(error: Int) {
                     isListening = false
+                    // Service-side failures: drop the recognizer and fall
+                    // back to the speech activity route once.
+                    if ((error == SpeechRecognizer.ERROR_CLIENT ||
+                            error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ||
+                            error == SpeechRecognizer.ERROR_SERVER) && !fallbackTried
+                    ) {
+                        fallbackTried = true
+                        try { speechRecognizer.value?.destroy() } catch (e: Exception) { /* already gone */ }
+                        speechRecognizer.value = null
+                        launchActivityFallback()
+                        return
+                    }
                     val msg = when (error) {
                         SpeechRecognizer.ERROR_NO_MATCH,
                         SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech heard"
                         SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> voicePermissionDeniedMsg
+                        SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
+                        SpeechRecognizer.ERROR_NETWORK,
+                        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network error — speech service unreachable"
+                        SpeechRecognizer.ERROR_CLIENT -> "Speech service rejected the request (code 5)"
+                        SpeechRecognizer.ERROR_SERVER -> "Speech service error"
+                        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Speech service busy"
                         else -> "code $error"
                     }
                     if (error != SpeechRecognizer.ERROR_NO_MATCH &&
@@ -359,18 +387,20 @@ fun ChatInputBar(
                 }
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
+            recognizer.cancel()
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault().toLanguageTag())
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                putExtra(RecognizerIntent.EXTRA_PROMPT, voicePrompt)
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
             }
             recognizer.startListening(intent)
             isListening = true
             Toast.makeText(context, voiceListeningMsg, Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             isListening = false
-            Toast.makeText(context, "$voiceUnavailableMsg: ${e.message}", Toast.LENGTH_SHORT).show()
+            launchActivityFallback()
         }
     }
 
