@@ -2876,7 +2876,45 @@ class AntigravityViewModel : ViewModel() {
         try {
             syncConfigBidirectional(context)
         } catch (e: Exception) {}
+        try {
+            ensureDefaultGlobalAgentsRule(context)
+        } catch (e: Exception) {}
         return directConfig
+    }
+
+    private val defaultGlobalAgentsRule: String = """
+# Core global behavior and environment execution standards
+
+## Running local servers (websites, APIs, previews) on this phone
+
+This app runs on an Android phone. Commands you run live in a session that ends when your turn ends, and any server started normally inside that session is killed with it. The user then gets "connection refused" in their browser even though you said the server was running.
+
+- When you start a local server for the user, ALWAYS start it fully detached so it keeps running after your turn ends:
+  setsid nohup <server command> > server.log 2>&1 < /dev/null &
+- NEVER tell the user a server is "running", "live", or "up" until you have verified it yourself with a real HTTP request (for example: curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:<port>) and received HTTP 200. If the check fails, read server.log, fix the problem, and check again before reporting.
+- Give the user the address as http://127.0.0.1:<port>. Use 127.0.0.1, not 0.0.0.0 - 0.0.0.0 is only a bind address for the server itself, never an address to open in a browser.
+- Tell the user the page works only on this phone, in their browser, while this app stays alive in the background. If they swipe the app away or restart the phone, the server stops and has to be started again.
+""".trimIndent()
+
+    private fun ensureDefaultGlobalAgentsRule(context: Context) {
+        val markerName = ".aazim_default_agents_rule_v1"
+        val targets = listOf(
+            File(context.filesDir, ".gemini/config"),
+            File(context.filesDir, "home/.gemini/config"),
+            File(context.filesDir, "home/.gemini")
+        )
+        for (dir in targets) {
+            try {
+                if (!dir.exists()) dir.mkdirs()
+                val marker = File(dir, markerName)
+                if (marker.exists()) continue
+                val agents = File(dir, "AGENTS.md")
+                if (!agents.exists()) {
+                    agents.writeText(defaultGlobalAgentsRule)
+                }
+                marker.writeText("1")
+            } catch (e: Exception) {}
+        }
     }
 
     fun syncConfigBidirectional(context: Context) {
