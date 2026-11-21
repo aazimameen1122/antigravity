@@ -59,7 +59,7 @@ android {
 
     val keystorePath = localProperties.getProperty("signing.storeFile")
         ?: (project.findProperty("storeFile") as String?)
-        ?: "KuatoDev.jks"
+        ?: "Aazim.jks"
     val resolvedKeystore = file(keystorePath)
 
     signingConfigs {

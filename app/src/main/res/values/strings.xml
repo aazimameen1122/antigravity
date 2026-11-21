@@ -170,7 +170,7 @@
     <string name="about_modules_header">Core Architecture Modules</string>
     <string name="about_libraries_header">Libraries &amp; Runtime</string>
     <string name="about_btn_open_repo">Open on GitHub</string>
-    <string name="about_repo_name">KuatoDev/Antigravity</string>
+    <string name="about_repo_name">aazimameen1122/antigravity</string>
     <string name="about_repo_desc">Native Android client for Google Antigravity</string>
     <string name="about_contrib_werdik_title">Werdik (werdio325-png)</string>
     <string name="about_contrib_werdik_desc">Android userspace environment (env/), pkg package manager (Bash/AWK), and agy-daemon scheduler.</string>

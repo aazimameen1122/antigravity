@@ -5139,7 +5139,7 @@ fun AboutSettingsPage(
                     ) {
                         OutlinedButton(
                             onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/KuatoDev/Antigravity"))
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/aazimameen1122/antigravity"))
                                 context.startActivity(intent)
                             },
                             shape = RoundedCornerShape(8.dp),
@@ -5207,24 +5207,6 @@ fun AboutSettingsPage(
                                 textAlign = TextAlign.Center
                             )
                         }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/kuatodevprojects"))
-                            context.startActivity(intent)
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_telegram),
-                            contentDescription = null,
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.about_btn_telegram_community))
                     }
                 }
             }

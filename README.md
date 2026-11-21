@@ -4,11 +4,6 @@
 
   # Antigravity for Android
 
-  <p align="center">
-    <a href="README.md"><img src="https://img.shields.io/badge/English-007ACC?style=for-the-badge" alt="English" /></a>
-    &nbsp;
-    <a href="README.id.md"><img src="https://img.shields.io/badge/Bahasa%20Indonesia-DC3545?style=for-the-badge" alt="Bahasa Indonesia" /></a>
-  </p>
 
   [![Android](https://img.shields.io/badge/Android-11.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](https://android.com)
   [![Architecture](https://img.shields.io/badge/Architecture-ARM64-blue?style=flat-square)](https://arm.com)
@@ -18,7 +13,6 @@
 
   <br /><br />
 
-  <img src="assets/banner.png" alt="Antigravity for Android Showcase" width="100%" />
 
 </div>
 
@@ -33,44 +27,15 @@ Antigravity for Android runs Google Antigravity AI coding agents on Android devi
 - **Background Daemon (`agy-daemon`)**: Background service handling cron tasks, file watchers, and notifications.
 - **Skills & Plugins**: Fetch community skills and plugins directly from the catalogue.
 
-## Related Repositories
-
-- [KuatoDev/antigravity-bootstrap](https://github.com/KuatoDev/antigravity-bootstrap) — Pre-built Linux ARM64 rootfs extracted on first run.
-- [KuatoDev/antigravity-catalogue](https://github.com/KuatoDev/antigravity-catalogue) — Skills and plugins catalogue. Submit a pull request here to share custom skills :)
-
 ## Requirements
 
 - Android 11+ (`arm64-v8a`)
 - Storage & notification permissions
 
-## Community
-
-- **Telegram Channel**: [t.me/vernkuato](https://t.me/vernkuato)
-- **Telegram Group**: [t.me/kuatodevprojects](https://t.me/kuatodevprojects)
-
-## Donation
-
-If you find Antigravity for Android useful and want to support its development, you can donate via:
-
-<div align="center">
-
-  <a href="https://saweria.co/kuatodev">
-    <img src="assets/saweria-qr.png" alt="Saweria QR Code" width="180" height="180" style="border-radius: 12px; background: white; padding: 8px;" />
-  </a>
-
-  <br />
-
-  [![Saweria](https://img.shields.io/badge/Saweria-kuatodev-FAAE2B?style=for-the-badge&logo=coffee&logoColor=black)](https://saweria.co/kuatodev)
-  &nbsp;
-  [![PayPal](https://img.shields.io/badge/PayPal-vernkuato-00457C?style=for-the-badge&logo=paypal&logoColor=white)](http://paypal.me/vernkuato)
-
-  <p><sub>Scan the QR code above or visit <strong><a href="https://saweria.co/kuatodev">Saweria</a></strong> (QRIS, GoPay, OVO, Dana) or <strong><a href="http://paypal.me/vernkuato">PayPal</a></strong>.</sub></p>
-
-</div>
-
 ## Credits
 
-- **[Werdik (werdio325-png)](https://github.com/werdio325-png)** — `pkg`, `agy-daemon`, and userspace scripts.
+- **[Aazim Ameen](https://github.com/aazimameen1122)** — Custom build, packaging, and maintenance of this edition.
+
 - **[Termux](https://github.com/termux)** — Android ARM64 rootfs base and `libtermux-exec`.
 - **[Google DeepMind](https://deepmind.google)** — Antigravity core `language_server`.
 
@@ -82,7 +47,7 @@ If you find Antigravity for Android useful and want to support its development, 
 
 ---
 
-## This fork (Aazim Ameen)
+## About this build
 
 Custom build published as package `com.aazim.antigravity`. The Google OAuth
 client id/secret in `OAuthManager.kt` are placeholders in this repository —
