@@ -25,8 +25,8 @@ android {
         applicationId = "com.aazim.antigravity"
         minSdk = 26
         targetSdk = 28
-        versionCode = 10
-        versionName = "1.0.9"
+        versionCode = 14
+        versionName = "1.1.3"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -59,7 +59,7 @@ android {
 
     val keystorePath = localProperties.getProperty("signing.storeFile")
         ?: (project.findProperty("storeFile") as String?)
-        ?: "Aazim.jks"
+        ?: "KuatoDev.jks"
     val resolvedKeystore = file(keystorePath)
 
     signingConfigs {

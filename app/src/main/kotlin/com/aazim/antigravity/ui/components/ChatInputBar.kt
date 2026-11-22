@@ -416,89 +416,70 @@ fun ChatInputBar(
     val voiceDownloadingMsg = stringResource(R.string.chat_voice_downloading_model)
     val voiceModelFailedMsg = stringResource(R.string.chat_voice_model_failed)
     val voiceScope = rememberCoroutineScope()
-    val voskService = remember { mutableStateOf<SpeechService?>(null) }
     var isPreparingVoice by remember { mutableStateOf(false) }
+    // v1.1.2: single mic button, NO language picker. Auto-detect runs the
+    // English and Hindi Vosk recognizers in parallel on the same audio
+    // (DualVoiceSession) and keeps whichever result scores higher; a Hindi
+    // win is transliterated to Hinglish (Roman) before it lands.
+    val voiceSession = remember { mutableStateOf<DualVoiceSession?>(null) }
 
     fun stopOfflineListening() {
-        try { voskService.value?.stop() } catch (e: Exception) { /* already stopped */ }
+        val session = voiceSession.value
+        voiceSession.value = null
+        if (session != null) {
+            val finalText = session.stopAndGetFinal()
+            if (finalText.isNotBlank()) {
+                val base = speechBaseText
+                speechBaseText = if (base.isBlank()) finalText else "$base $finalText"
+                inputText = speechBaseText
+            }
+        }
         isListening = false
     }
 
     fun startOfflineListening() {
-        if (isPreparingVoice) return
+        if (isPreparingVoice || isListening) return
         speechBaseText = inputText
-        val startWithModel = { loadedModel: org.vosk.Model ->
+        val needsDownload = !OfflineVoice.isModelDownloaded(context, VoiceLanguage.EN_IN) ||
+            !OfflineVoice.isModelDownloaded(context, VoiceLanguage.HI)
+        isPreparingVoice = true
+        if (needsDownload) {
+            Toast.makeText(context, voiceDownloadingMsg, Toast.LENGTH_LONG).show()
+        }
+        voiceScope.launch {
             try {
-                val recognizer = Recognizer(loadedModel, OfflineVoice.sampleRate())
-                val service = SpeechService(recognizer, OfflineVoice.sampleRate())
-                voskService.value = service
-                service.startListening(object : org.vosk.android.RecognitionListener {
-                    override fun onPartialResult(hypothesis: String?) {
-                        val partial = try {
-                            JSONObject(hypothesis ?: "{}").optString("partial")
-                        } catch (e: Exception) { "" }
-                        if (partial.isNotBlank()) {
+                val enModel = OfflineVoice.ensureModel(context, VoiceLanguage.EN_IN)
+                val hiModel = OfflineVoice.ensureModel(context, VoiceLanguage.HI)
+                isPreparingVoice = false
+                val session = DualVoiceSession(
+                    enModel = enModel,
+                    hiModel = hiModel,
+                    onPartial = { partial ->
+                        val base = speechBaseText
+                        inputText = if (base.isBlank()) partial else "$base $partial"
+                    },
+                    onSegment = { segment ->
+                        if (segment.isNotBlank()) {
                             val base = speechBaseText
-                            inputText = if (base.isBlank()) partial else "$base $partial"
-                        }
-                    }
-                    override fun onResult(hypothesis: String?) {
-                        val text = try {
-                            JSONObject(hypothesis ?: "{}").optString("text")
-                        } catch (e: Exception) { "" }
-                        if (text.isNotBlank()) {
-                            val base = speechBaseText
-                            speechBaseText = if (base.isBlank()) text else "$base $text"
+                            speechBaseText = if (base.isBlank()) segment else "$base $segment"
                             inputText = speechBaseText
                         }
-                    }
-                    override fun onFinalResult(hypothesis: String?) {
-                        val text = try {
-                            JSONObject(hypothesis ?: "{}").optString("text")
-                        } catch (e: Exception) { "" }
-                        if (text.isNotBlank()) {
-                            val base = speechBaseText
-                            speechBaseText = if (base.isBlank()) text else "$base $text"
-                            inputText = speechBaseText
-                        }
+                    },
+                    onError = { msg ->
                         isListening = false
+                        voiceSession.value = null
+                        Toast.makeText(context, "$voiceErrorMsg: $msg", Toast.LENGTH_SHORT).show()
                     }
-                    override fun onError(exception: Exception?) {
-                        isListening = false
-                        Toast.makeText(
-                            context,
-                            "$voiceErrorMsg: ${exception?.message ?: "offline recognizer error"}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                    override fun onTimeout() { isListening = false }
-                })
+                )
+                voiceSession.value = session
+                session.start()
                 isListening = true
                 Toast.makeText(context, voiceListeningMsg, Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
+                isPreparingVoice = false
                 isListening = false
                 Toast.makeText(context, voiceModelFailedMsg, Toast.LENGTH_LONG).show()
                 startInAppListening()
-            }
-        }
-        val ready = OfflineVoice.model
-        if (ready != null) {
-            startWithModel(ready)
-        } else {
-            isPreparingVoice = true
-            if (!OfflineVoice.isModelDownloaded(context)) {
-                Toast.makeText(context, voiceDownloadingMsg, Toast.LENGTH_LONG).show()
-            }
-            voiceScope.launch {
-                try {
-                    val loaded = OfflineVoice.ensureModel(context)
-                    isPreparingVoice = false
-                    startWithModel(loaded)
-                } catch (e: Exception) {
-                    isPreparingVoice = false
-                    Toast.makeText(context, voiceModelFailedMsg, Toast.LENGTH_LONG).show()
-                    startInAppListening()
-                }
             }
         }
     }
@@ -528,8 +509,8 @@ fun ChatInputBar(
 
     DisposableEffect(Unit) {
         onDispose {
-            try { voskService.value?.shutdown() } catch (e: Exception) { /* already gone */ }
-            voskService.value = null
+            try { voiceSession.value?.stopAndGetFinal() } catch (e: Exception) { /* already gone */ }
+            voiceSession.value = null
             speechRecognizer.value?.destroy()
             speechRecognizer.value = null
         }
@@ -1306,6 +1287,7 @@ fun ChatInputBar(
                     }
 
                     Spacer(modifier = Modifier.width(4.dp))
+
                     Box(
                         modifier = Modifier
                             .requiredSize(32.dp)

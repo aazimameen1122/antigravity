@@ -71,6 +71,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Visibility
 import android.widget.Toast
 import com.aazim.antigravity.ui.components.AgentDetailsBottomSheet
 import com.aazim.antigravity.ui.components.DialogBlurEffect
@@ -142,6 +143,7 @@ fun ChatScreen(
     onNavigateToFiles: () -> Unit = {},
     onNavigateToEditor: () -> Unit = {},
     onNavigateToTerminal: () -> Unit = {},
+    onNavigateToPreview: () -> Unit = {},
     onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -1355,6 +1357,20 @@ fun ChatScreen(
                                             context.getString(if (pinned) R.string.toast_conversation_pinned else R.string.toast_conversation_unpinned),
                                             Toast.LENGTH_SHORT
                                         ).show()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_open_preview)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Visibility,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenuDropdown = false
+                                        onNavigateToPreview()
                                     }
                                 )
                                 DropdownMenuItem(

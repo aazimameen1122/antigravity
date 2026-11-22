@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,6 +67,7 @@ import com.aazim.antigravity.ui.components.DiffViewer
 import com.aazim.antigravity.ui.components.FileTree
 import com.aazim.antigravity.ui.components.ModelSelectorDialog
 import com.aazim.antigravity.ui.components.TerminalView
+import com.aazim.antigravity.ui.components.PreviewScreen
 import com.aazim.antigravity.viewmodel.AntigravityViewModel
 import java.io.File
 import java.util.UUID
@@ -75,6 +77,7 @@ enum class ActiveToolView {
     FILES,
     EDITOR,
     TERMINAL,
+    PREVIEW,
     SETTINGS
 }
 
@@ -168,6 +171,13 @@ fun WorkspaceScreen(
                         onClick = { activeView = ActiveToolView.TERMINAL },
                         icon = { Icon(imageVector = Icons.Default.Terminal, contentDescription = stringResource(R.string.nav_item_terminal)) },
                         label = { Text(stringResource(R.string.nav_item_terminal), fontSize = 10.sp) }
+                    )
+
+                    NavigationRailItem(
+                        selected = activeView == ActiveToolView.PREVIEW,
+                        onClick = { activeView = ActiveToolView.PREVIEW },
+                        icon = { Icon(imageVector = Icons.Default.Visibility, contentDescription = stringResource(R.string.nav_item_preview)) },
+                        label = { Text(stringResource(R.string.nav_item_preview), fontSize = 10.sp) }
                     )
 
                     Spacer(modifier = Modifier.weight(1f))
@@ -264,13 +274,15 @@ fun WorkspaceScreen(
                         ) { targetView ->
                             when (targetView) {
                                 ActiveToolView.TERMINAL -> TerminalView(modifier = Modifier.fillMaxSize())
+                                ActiveToolView.PREVIEW -> PreviewScreen(onClose = { activeView = ActiveToolView.CHAT }, modifier = Modifier.fillMaxSize())
                                 ActiveToolView.SETTINGS -> SettingsScreen(viewModel = viewModel, onNavigateBack = { activeView = ActiveToolView.CHAT })
                                 else -> ChatScreen(
                                     viewModel = viewModel,
                                     onNavigateToSettings = { activeView = ActiveToolView.SETTINGS },
                                     onNavigateToFiles = { activeView = ActiveToolView.FILES },
                                     onNavigateToEditor = { activeView = ActiveToolView.EDITOR },
-                                    onNavigateToTerminal = { activeView = ActiveToolView.TERMINAL }
+                                    onNavigateToTerminal = { activeView = ActiveToolView.TERMINAL },
+                                    onNavigateToPreview = { activeView = ActiveToolView.PREVIEW }
                                 )
                             }
                         }
@@ -300,7 +312,8 @@ fun WorkspaceScreen(
                             onNavigateToSettings = { activeView = ActiveToolView.SETTINGS },
                             onNavigateToFiles = { activeView = ActiveToolView.FILES },
                             onNavigateToEditor = { activeView = ActiveToolView.EDITOR },
-                            onNavigateToTerminal = { activeView = ActiveToolView.TERMINAL }
+                            onNavigateToTerminal = { activeView = ActiveToolView.TERMINAL },
+                            onNavigateToPreview = { activeView = ActiveToolView.PREVIEW }
                         )
                     }
 
@@ -579,6 +592,10 @@ fun WorkspaceScreen(
                                 TerminalView(modifier = Modifier.fillMaxSize())
                             }
                         }
+                    }
+
+                    ActiveToolView.PREVIEW -> {
+                        PreviewScreen(onClose = { activeView = ActiveToolView.CHAT }, modifier = Modifier.fillMaxSize())
                     }
 
                     ActiveToolView.SETTINGS -> {
