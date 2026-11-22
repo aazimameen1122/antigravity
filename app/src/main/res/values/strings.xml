@@ -269,6 +269,8 @@
     <string name="chat_voice_no_service">No speech service on this device. Install or enable the Google app (or Gboard voice typing), then try again.</string>
     <string name="chat_voice_permission_denied">Microphone permission is needed for voice input</string>
     <string name="chat_voice_error">Voice input error: %s</string>
+    <string name="chat_voice_downloading_model">Downloading offline voice model (one-time, ~38 MB)…</string>
+    <string name="chat_voice_model_failed">Offline voice model failed to load — trying the system speech service instead</string>
     <string name="chat_model_select">Select model</string>
     <string name="chat_mention_file">Workspace file</string>
     <string name="chat_worked_for">Worked for %s</string>

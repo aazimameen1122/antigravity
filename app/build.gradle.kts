@@ -25,8 +25,8 @@ android {
         applicationId = "com.aazim.antigravity"
         minSdk = 26
         targetSdk = 28
-        versionCode = 8
-        versionName = "1.0.7"
+        versionCode = 9
+        versionName = "1.0.8"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -144,5 +144,9 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.kotlinx.serialization.json)
+
+    // Offline speech recognition (Vosk) — voice input must not depend on
+    // the device's system speech service (rejects this app with code 5).
+    implementation("com.alphacephei:vosk-android:0.3.47")
 }
 

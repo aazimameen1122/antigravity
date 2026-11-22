@@ -11,6 +11,10 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+import org.vosk.Recognizer
+import org.vosk.android.SpeechService
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -82,6 +86,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -404,23 +409,118 @@ fun ChatInputBar(
         }
     }
 
+    // Primary route since v1.0.8: fully offline Vosk recognition.
+    // The system speech service on the user's ROM rejects this app with
+    // ERROR_CLIENT (code 5) through both the in-app and activity routes
+    // (verified on v1.0.6 and v1.0.7), so it is only a fallback now.
+    val voiceDownloadingMsg = stringResource(R.string.chat_voice_downloading_model)
+    val voiceModelFailedMsg = stringResource(R.string.chat_voice_model_failed)
+    val voiceScope = rememberCoroutineScope()
+    val voskService = remember { mutableStateOf<SpeechService?>(null) }
+    var isPreparingVoice by remember { mutableStateOf(false) }
+
+    fun stopOfflineListening() {
+        try { voskService.value?.stop() } catch (e: Exception) { /* already stopped */ }
+        isListening = false
+    }
+
+    fun startOfflineListening() {
+        if (isPreparingVoice) return
+        speechBaseText = inputText
+        val startWithModel = { loadedModel: org.vosk.Model ->
+            try {
+                val recognizer = Recognizer(loadedModel, OfflineVoice.sampleRate())
+                val service = SpeechService(recognizer, OfflineVoice.sampleRate())
+                voskService.value = service
+                service.startListening(object : org.vosk.android.RecognitionListener {
+                    override fun onPartialResult(hypothesis: String?) {
+                        val partial = try {
+                            JSONObject(hypothesis ?: "{}").optString("partial")
+                        } catch (e: Exception) { "" }
+                        if (partial.isNotBlank()) {
+                            val base = speechBaseText
+                            inputText = if (base.isBlank()) partial else "$base $partial"
+                        }
+                    }
+                    override fun onResult(hypothesis: String?) {
+                        val text = try {
+                            JSONObject(hypothesis ?: "{}").optString("text")
+                        } catch (e: Exception) { "" }
+                        if (text.isNotBlank()) {
+                            val base = speechBaseText
+                            speechBaseText = if (base.isBlank()) text else "$base $text"
+                            inputText = speechBaseText
+                        }
+                    }
+                    override fun onFinalResult(hypothesis: String?) {
+                        val text = try {
+                            JSONObject(hypothesis ?: "{}").optString("text")
+                        } catch (e: Exception) { "" }
+                        if (text.isNotBlank()) {
+                            val base = speechBaseText
+                            speechBaseText = if (base.isBlank()) text else "$base $text"
+                            inputText = speechBaseText
+                        }
+                        isListening = false
+                    }
+                    override fun onError(exception: Exception?) {
+                        isListening = false
+                        Toast.makeText(
+                            context,
+                            "$voiceErrorMsg: ${exception?.message ?: "offline recognizer error"}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    override fun onTimeout() { isListening = false }
+                })
+                isListening = true
+                Toast.makeText(context, voiceListeningMsg, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                isListening = false
+                Toast.makeText(context, voiceModelFailedMsg, Toast.LENGTH_LONG).show()
+                startInAppListening()
+            }
+        }
+        val ready = OfflineVoice.model
+        if (ready != null) {
+            startWithModel(ready)
+        } else {
+            isPreparingVoice = true
+            if (!OfflineVoice.isModelDownloaded(context)) {
+                Toast.makeText(context, voiceDownloadingMsg, Toast.LENGTH_LONG).show()
+            }
+            voiceScope.launch {
+                try {
+                    val loaded = OfflineVoice.ensureModel(context)
+                    isPreparingVoice = false
+                    startWithModel(loaded)
+                } catch (e: Exception) {
+                    isPreparingVoice = false
+                    Toast.makeText(context, voiceModelFailedMsg, Toast.LENGTH_LONG).show()
+                    startInAppListening()
+                }
+            }
+        }
+    }
+
     val micPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) startInAppListening()
+        if (granted) startOfflineListening()
         else Toast.makeText(context, voicePermissionDeniedMsg, Toast.LENGTH_LONG).show()
     }
 
     fun startVoiceInput() {
         if (isListening) {
-            speechRecognizer.value?.stopListening()
+            stopOfflineListening()
+            try { speechRecognizer.value?.stopListening() } catch (e: Exception) { /* not running */ }
             isListening = false
             return
         }
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
         ) {
-            startInAppListening()
+            startOfflineListening()
         } else {
             micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
@@ -428,6 +528,8 @@ fun ChatInputBar(
 
     DisposableEffect(Unit) {
         onDispose {
+            try { voskService.value?.shutdown() } catch (e: Exception) { /* already gone */ }
+            voskService.value = null
             speechRecognizer.value?.destroy()
             speechRecognizer.value = null
         }
