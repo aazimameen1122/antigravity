@@ -23,3 +23,12 @@
 -dontwarn coil.**
 
 -keep class com.aazim.antigravity.BuildConfig { *; }
+
+# JNA + Vosk (offline voice): JNA resolves its Pointer.peer field and
+# Vosk's structures by name through JNI — R8 renaming/stripping them
+# crashes at startup with "Can't obtain peer field ID for class
+# com.sun.jna.Pointer" (hit on v1.0.8). Keep both fully.
+-keep class com.sun.jna.** { *; }
+-keep class org.vosk.** { *; }
+-dontwarn com.sun.jna.**
+-dontwarn org.vosk.**
